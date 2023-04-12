@@ -2,15 +2,26 @@ import { PrismaClient } from "@prisma/client";
 import express, { Application, Request, Response } from "express";
 import { Model3DRequest } from "./interface";
 
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getStorage } = require('firebase-admin/storage');
+
 const app: Application = express();
 const port = process.env.PORT ?? 8080;
 
 const prisma = new PrismaClient()
+const serviceAccount = require('firebase_credentials.json');
 
 
 // Body parsing Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+initializeApp({
+    credential: cert(serviceAccount),
+    storageBucket: 'models-myracle-apoorvo.appspot.com'
+});
+
+const bucket = getStorage().bucket();
 
 app.get(
     "/",
