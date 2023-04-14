@@ -1,24 +1,54 @@
 import { PrismaClient } from "@prisma/client";
 import express, { Application, Request, Response } from "express";
-import { Model3DRequest } from "./interface";
+
+import { Model3DRequest, RequestWithFile } from "./interface";
+import path from "path";
 
 const { initializeApp, cert } = require('firebase-admin/app');
-const { getStorage } = require('firebase-admin/storage');
+const { getStorage,ref, uploadBytes, getDownloadURL   } = require('firebase-admin/storage');
+const cors = require('cors')
+
 
 const app: Application = express();
-const port = process.env.PORT ?? 8080;
+const port = process.env.PORT ?? 3000;
 
 const prisma = new PrismaClient()
-const serviceAccount = require('firebase_credentials.json');
+const serviceAccount = require('./firebase_credentials.json');
+
+const Multer  = require('multer')
 
 
 // Body parsing Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors())
+
+const multer = Multer({
+    storage:Multer.memoryStorage(),
+    fileFilter: function(_req, file,cb){
+        checkFileType(file, cb)
+    }
+})
+
+const checkFileType = (file, cb)=>{
+    // Allowed ext
+    const filetypes = /jpeg|jpg|png|gif/;
+    // Check ext
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    // Check mime
+    const mimetype = filetypes.test(file.mimetype);
+  
+    if(mimetype && extname){
+      return cb(null, true);
+    } else {
+      return cb(null, false);
+    }
+  }
+
 
 initializeApp({
     credential: cert(serviceAccount),
-    storageBucket: 'models-myracle-apoorvo.appspot.com'
+    storageBucket: process.env.BUCKET_NAME
 });
 
 const bucket = getStorage().bucket();
@@ -38,15 +68,25 @@ app.get("/models",async(req: Request,res :Response):Promise<Response>=>{
     return res.send({models})
 })
 
-app.post("/models",async(req: Request,res :Response):Promise<Response>=>{
-    const model = await prisma.model3D.create({
-        data:{
-            name:"Dummy Model",
-            url:"https://dummyurl.com"
-        }
-    })
+app.post("/models",multer.single('modelFile'),async(req: RequestWithFile,res :Response):Promise<Response>=>{
+    try{
+        const date = new Date()
+        const filenae = (date.toISOString())+req.file?.originalname
+        await bucket.file(filenae).save(req.file?.buffer)  
+        
+        const model = await prisma.model3D.create({
+            data:{
+                name:req.body.name,
+                url:`gs://${process.env.BUCKET_NAME}/${filenae}`
+            }
+        })
+        return res.send({model})   
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({error:err})
+    }
 
-    return res.send({message:"Model created succesfully with id:"+ model.id})
+
 })
 
 app.get("/models/:id/",async (req:Request, res: Response):Promise<Response> => {
@@ -64,7 +104,7 @@ app.put("/models/:id/",async (req:Request, res: Response):Promise<Response> => {
         data
     })
 
-    return res.send(model)
+    return res.send({model})
 })
 
 app.delete("/models/:id/",async (req:Request, res: Response): Promise<Response> => {
