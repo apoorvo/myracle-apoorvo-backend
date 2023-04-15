@@ -84,10 +84,15 @@ app.post("/models",multer.single('modelFile'),async(req: RequestWithFile,res :Re
         if(req.body.description){
             data["description"] = req.body.description
         }
+        console.log("Data: ", data)
 
         const model = await prisma.model3D.create({
             data
         })
+
+        console.log("Model:  ", model)
+
+
         return res.send({model})   
     }catch(err){
         
