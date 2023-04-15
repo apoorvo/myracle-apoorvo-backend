@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors())
 
-const allowedFileExtensions = ['.obj', '.glb','.gltf','.fbc']
+const allowedFileExtensions = ['.glb','.gltf','.fbx']
 
 const multer = Multer({
     storage:Multer.memoryStorage(),
