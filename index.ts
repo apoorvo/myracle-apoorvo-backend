@@ -63,10 +63,12 @@ app.post("/models",multer.single('modelFile'),async(req: RequestWithFile,res :Re
                 return res.status(500).send({error:"invalid filetype"})
               }
       
+        }else{
+            throw new Error("file is required")
         }
 
         if(!req.body.name){
-            throw Error("name is required")
+            throw new Error("name is required")
         }
 
         const date = new Date()
@@ -88,8 +90,9 @@ app.post("/models",multer.single('modelFile'),async(req: RequestWithFile,res :Re
         })
         return res.send({model})   
     }catch(err){
+        
         console.log(err)
-        return res.status(500).send({error:err})
+        return res.status(500).send({err:err})
     }
 
 
